@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bible Study Survey</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f3ee;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+    color: #1a1a1a;
+  }
+
+  .survey-wrapper { max-width: 680px; margin: 0 auto; }
+
+  .survey-header { text-align: center; margin-bottom: 2.5rem; }
+
+  .header-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, #5a3e8a, #9370db);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem; font-size: 26px;
+  }
+
+  .survey-header h1 { font-size: 1.7rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.4rem; }
+  .survey-header p { color: #666; font-size: 0.95rem; }
+
+  .progress-bar-wrap {
+    background: #e0dbd6; border-radius: 99px; height: 6px;
+    margin: 1.5rem 0 2rem; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5a3e8a, #9370db);
+    border-radius: 99px; transition: width 0.4s ease; width: 0%;
+  }
+  .progress-label { text-align: right; font-size: 0.8rem; color: #888; margin-bottom: 0.5rem; }
+
+  .question-card {
+    background: #fff; border-radius: 16px;
+    padding: 1.75rem 1.75rem 1.5rem; margin-bottom: 1.25rem;
+    border: 1px solid #e5e0d8; transition: box-shadow 0.2s;
+  }
+  .question-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+
+  .question-number {
+    font-size: 0.75rem; font-weight: 600; color: #9370db;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;
+  }
+  .question-text { font-size: 1.05rem; font-weight: 600; color: #1a1a1a; margin-bottom: 0.3rem; line-height: 1.4; }
+  .question-hint { font-size: 0.8rem; color: #999; margin-bottom: 1.1rem; }
+
+  .options-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .option-label {
+    display: flex; align-items: center; gap: 0.85rem;
+    padding: 0.7rem 0.9rem; border: 1.5px solid #e5e0d8;
+    border-radius: 10px; cursor: pointer; transition: all 0.15s;
+    user-select: none; font-size: 0.95rem; color: #2a2a2a;
+  }
+  .option-label:hover { border-color: #9370db; background: #faf7ff; }
+  .option-label.selected { border-color: #5a3e8a; background: #f3eeff; color: #3d2a6a; font-weight: 500; }
+
+  .option-label input[type="radio"],
+  .option-label input[type="checkbox"] {
+    width: 18px; height: 18px; accent-color: #5a3e8a; flex-shrink: 0; cursor: pointer;
+  }
+  .option-text { flex: 1; }
+
+  .check-mark {
+    width: 20px; height: 20px; border-radius: 50%; background: #5a3e8a;
+    display: none; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .check-mark svg { width: 12px; height: 12px; }
+  .option-label.selected .check-mark { display: flex; }
+
+  .validation-msg { font-size: 0.78rem; color: #c0392b; margin-top: 0.6rem; display: none; }
+
+  .actions { display: flex; justify-content: center; margin-top: 2rem; }
+
+  .btn-submit {
+    padding: 0.85rem 3rem; border-radius: 12px; font-size: 1rem;
+    font-weight: 700; cursor: pointer; border: none; transition: all 0.2s;
+    display: flex; align-items: center; gap: 0.5rem;
+    background: linear-gradient(135deg, #5a3e8a, #7b5cbf);
+    color: #fff; box-shadow: 0 2px 10px rgba(90,62,138,0.35);
+    letter-spacing: 0.02em;
+  }
+  .btn-submit:hover:not(:disabled) { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(90,62,138,0.35); }
+  .btn-submit:active:not(:disabled) { transform: translateY(0); }
+  .btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: none; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .success-screen {
+    display: none; text-align: center; padding: 3rem 2rem;
+    background: #fff; border-radius: 16px; border: 1px solid #e5e0d8;
+    margin-top: 1rem;
+  }
+  .success-screen.visible { display: block; }
+
+  .success-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, #1a7a4a, #27ae60);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem; font-size: 30px;
+  }
+  .success-screen h2 { font-size: 1.4rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.5rem; }
+  .success-screen p { color: #666; font-size: 0.95rem; line-height: 1.6; }
+
+  .toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a1a1a; color: #fff;
+    padding: 0.7rem 1.5rem; border-radius: 99px;
+    font-size: 0.88rem; font-weight: 500;
+    transition: transform 0.35s ease; z-index: 999;
+    white-space: nowrap; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #c0392b; }
+
+  @media (max-width: 500px) {
+    .question-card { padding: 1.25rem; }
+    .survey-header h1 { font-size: 1.4rem; }
+    .btn-submit { padding: 0.8rem 2rem; font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="survey-wrapper">
+
+  <div class="survey-header">
+    <div class="header-icon">📖</div>
+    <h1>Bible Study Experience Survey</h1>
+    <p>Help us understand how to make Bible learning more engaging for you.</p>
+  </div>
+
+  <div id="form-section">
+    <div class="progress-label"><span id="progress-text">0 of 7 answered</span></div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-bar"></div></div>
+    <div id="survey-form"></div>
+    <div class="actions">
+      <button class="btn-submit" id="btn-submit" onclick="submitSurvey()">
+        <span id="submit-label">Submit</span>
+        <span class="spinner" id="submit-spinner"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">✓</div>
+    <h2>Thank you for your response!</h2>
+    <p>Your answers have been submitted successfully.<br>We appreciate your time and feedback.</p>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+emailjs.init('lg0ftn-4yhzGRftwi');
+
+const EMAILJS_SERVICE  = 'service_m4o2e9c';
+const EMAILJS_TEMPLATE = 'template_12romw7';
+const TO_EMAIL         = 'dolajulius66@gmail.com';
+
+const questions = [
+  {
+    id: 1,
+    text: "How often do you read or study the Bible?",
+    type: "single",
+    options: ["Daily", "A few times a week", "Occasionally", "Rarely", "Never"]
+  },
+  {
+    id: 2,
+    text: "How do you currently study the Bible?",
+    hint: "Select all that apply",
+    type: "multi",
+    options: ["Personal reading", "Devotional books", "Church or group study", "Bible apps", "I don't have a consistent method"]
+  },
+  {
+    id: 3,
+    text: "What is your biggest challenge when studying the Bible?",
+    hint: "Select all that apply",
+    type: "multi",
+    options: ["Staying consistent", "Understanding the content", "Remembering verses", "Staying engaged (it feels boring or repetitive)", "Lack of structure or guidance"]
+  },
+  {
+    id: 4,
+    text: "Which of these would make Bible study more engaging for you?",
+    hint: "Select up to 2",
+    type: "multi",
+    max: 2,
+    options: ["Quizzes and challenges", "Memory verse games", "Completing missing scriptures", "Progress tracking (levels, streaks, rewards)", "Age-based or level-based learning paths"]
+  },
+  {
+    id: 5,
+    text: "Who would you primarily use this type of platform for?",
+    type: "single",
+    options: ["Myself", "My children", "Youth/teenagers", "Church or group members", "I would not use it"]
+  },
+  {
+    id: 6,
+    text: "Would you be willing to pay for a structured, interactive Bible learning platform?",
+    type: "single",
+    options: ["Yes (monthly subscription)", "Yes (one-time payment)", "Only if there is a free version with limited features", "No"]
+  },
+  {
+    id: 7,
+    text: "If yes, what price range feels reasonable per month?",
+    type: "single",
+    options: ["$1 - $3", "$4 - $7", "$8 - $12", "I would only use a free version"]
+  }
+];
+
+const responses = {};
+
+function buildForm() {
+  const form = document.getElementById('survey-form');
+  form.innerHTML = '';
+  questions.forEach(q => {
+    const card = document.createElement('div');
+    card.className = 'question-card';
+    card.id = 'card-' + q.id;
+
+    const numEl = document.createElement('div');
+    numEl.className = 'question-number';
+    numEl.textContent = 'Question ' + q.id + ' of ' + questions.length;
+    card.appendChild(numEl);
+
+    const textEl = document.createElement('div');
+    textEl.className = 'question-text';
+    textEl.textContent = q.text;
+    card.appendChild(textEl);
+
+    if (q.hint) {
+      const hintEl = document.createElement('div');
+      hintEl.className = 'question-hint';
+      hintEl.textContent = q.hint;
+      card.appendChild(hintEl);
+    }
+
+    const optList = document.createElement('div');
+    optList.className = 'options-list';
+
+    q.options.forEach((opt, idx) => {
+      const label = document.createElement('label');
+      label.className = 'option-label';
+      label.id = 'opt-' + q.id + '-' + idx;
+
+      const input = document.createElement('input');
+      input.type = q.type === 'single' ? 'radio' : 'checkbox';
+      input.name = 'q' + q.id;
+      input.value = opt;
+      input.addEventListener('change', () => handleChange(q, input, label));
+
+      const optText = document.createElement('span');
+      optText.className = 'option-text';
+      optText.textContent = opt;
+
+      const checkMark = document.createElement('span');
+      checkMark.className = 'check-mark';
+      checkMark.innerHTML = '<svg viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      label.appendChild(input);
+      label.appendChild(optText);
+      label.appendChild(checkMark);
+      optList.appendChild(label);
+    });
+
+    card.appendChild(optList);
+
+    const valMsg = document.createElement('div');
+    valMsg.className = 'validation-msg';
+    valMsg.id = 'val-' + q.id;
+    valMsg.textContent = q.max
+      ? 'Please select up to ' + q.max + ' options.'
+      : 'Please select at least one option.';
+    card.appendChild(valMsg);
+
+    form.appendChild(card);
+  });
+}
+
+function handleChange(q, input, label) {
+  if (q.type === 'single') {
+    document.querySelectorAll('input[name="q' + q.id + '"]').forEach((el, i) => {
+      const lbl = document.getElementById('opt-' + q.id + '-' + i);
+      if (lbl) lbl.classList.remove('selected');
+    });
+    label.classList.add('selected');
+    responses[q.id] = [input.value];
+  } else {
+    const checked = Array.from(document.querySelectorAll('input[name="q' + q.id + '"]:checked'));
+    if (q.max && checked.length > q.max) {
+      input.checked = false;
+      showToast('You can select up to ' + q.max + ' options here.');
+      return;
+    }
+    label.classList.toggle('selected', input.checked);
+    responses[q.id] = checked.map(c => c.value);
+    if (responses[q.id].length === 0) delete responses[q.id];
+  }
+  document.getElementById('val-' + q.id).style.display = 'none';
+  updateProgress();
+}
+
+function updateProgress() {
+  const answered = Object.keys(responses).length;
+  const total = questions.length;
+  document.getElementById('progress-bar').style.width = ((answered / total) * 100) + '%';
+  document.getElementById('progress-text').textContent = answered + ' of ' + total + ' answered';
+}
+
+function validateAll() {
+  let allValid = true;
+  questions.forEach(q => {
+    const ok = responses[q.id] && responses[q.id].length > 0;
+    document.getElementById('val-' + q.id).style.display = ok ? 'none' : 'block';
+    if (!ok) allValid = false;
+  });
+  return allValid;
+}
+
+function buildEmailBody() {
+  const ts = new Date().toLocaleString();
+  let body = 'BIBLE STUDY SURVEY RESPONSES\n';
+  body += 'Submitted: ' + ts + '\n';
+  body += '================================================\n\n';
+  questions.forEach(q => {
+    const ans = responses[q.id];
+    const ansStr = ans && ans.length > 0 ? ans.join(', ') : '(no answer)';
+    body += 'Q' + q.id + '. ' + q.text + '\n';
+    body += '   Answer: ' + ansStr + '\n\n';
+  });
+  body += '================================================\n';
+  body += 'CSV DATA (paste into Excel or Google Sheets):\n\n';
+  body += 'Question,Answer(s),Submitted At\n';
+  questions.forEach((q, i) => {
+    const ans = responses[q.id];
+    const ansStr = ans && ans.length > 0 ? ans.join(' | ') : '(no answer)';
+    body += '"' + q.text.replace(/"/g, '""') + '","' + ansStr.replace(/"/g, '""') + '",' + (i === 0 ? '"' + ts + '"' : '') + '\n';
+  });
+  return body;
+}
+
+async function submitSurvey() {
+  if (!validateAll()) {
+    const firstInvalid = questions.find(q => !responses[q.id] || responses[q.id].length === 0);
+    if (firstInvalid) {
+      document.getElementById('card-' + firstInvalid.id).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    showToast('Please answer all questions before submitting.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-submit');
+  const lbl = document.getElementById('submit-label');
+  const spinner = document.getElementById('submit-spinner');
+
+  btn.disabled = true;
+  lbl.textContent = 'Submitting…';
+  spinner.style.display = 'inline-block';
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: TO_EMAIL,
+      subject: 'Bible Study Survey Response — ' + new Date().toLocaleDateString(),
+      message: buildEmailBody()
+    });
+
+    document.getElementById('form-section').style.display = 'none';
+    document.getElementById('success-screen').classList.add('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (err) {
+    console.error('EmailJS error:', err);
+    lbl.textContent = 'Submit';
+    spinner.style.display = 'none';
+    btn.disabled = false;
+    showToast('Something went wrong. Please try again.');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast error';
+  void t.offsetWidth;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+buildForm();
+</script>
+</body>
+</html>
