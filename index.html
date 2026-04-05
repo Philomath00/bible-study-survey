@@ -381,6 +381,7 @@ async function submitSurvey() {
         template_id: EMAILJS_TEMPLATE,
         user_id: EMAILJS_PUBLIC_KEY,
         template_params: {
+          email: TO_EMAIL,
           to_email: TO_EMAIL,
           subject: 'Bible Study Survey Response — ' + new Date().toLocaleDateString(),
           message: buildEmailBody()
